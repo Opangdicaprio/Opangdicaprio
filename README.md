@@ -20,33 +20,85 @@ I built a Python automation script that runs as a scheduled cron job. The script
 *   **APIs & Integrations:** `gspread`, `google-auth`
 *   **Database Integration:** `SQLAlchemy` (PostgreSQL / MySQL)
 
+## 🚀 Impact & Results
+*Time Saved: Eliminated over 15 hours per week of manual data entry and formatting.
+*Data Accuracy: Reduced human error in shift reporting to near zero by standardizing inputs programmatically.
+*Real-time Analytics: Enabled the management team to query workforce distribution across all logistics centers without waiting for end-of-day manual reports.
+
 ## 💻 Sample Code Snippet (Sanitized)
 Here is a conceptual snippet demonstrating the data transformation phase before loading it into the data warehouse:
 
 ```python
-import pandas as pd
-from sqlalchemy import create_engine
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('Portal Cek Performa Bagger')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
 
-def transform_and_load(raw_data, table_name, db_connection_string):
-    # Load raw Google Sheets data into a DataFrame
-    df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+function getBaggerData(opsid, targetDate) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("RAW DATA BAGGER");
+  const data = sheet.getDataRange().getValues();
+  const tz = ss.getSpreadsheetTimeZone(); // Mengambil zona waktu sheet agar tanggal tidak meleset
+
+  let results = {};
+  let baggerFullName = "";
+  let searchId = opsid.toString().trim().toLowerCase();
+
+  // Mematenkan posisi kolom sesuai gambarmu (A=0, B=1, C=2, dst)
+  const idxDate = 0;   // Kolom A (Date)
+  const idxBagger = 2; // Kolom C (Bagger)
+  const idxTime = 5;   // Kolom F (Time)
+  const idxQty = 6;    // Kolom G (Qty)
+  const idxOpsId = 8;  // Kolom I (OPSID)
+
+  // Langsung baca dari baris pertama (index 0)
+  for (let i = 0; i < data.length; i++) {
+    let row = data[i];
     
-    # Data Cleaning & Transformation
-    df.dropna(subset=['Worker_ID', 'Shift_Date'], inplace=True)
-    df['Shift_Date'] = pd.to_datetime(df['Shift_Date'], format='%Y-%m-%d')
-    df['Status'] = df['Status'].str.strip().str.upper()
-    
-    # Establish Database Connection
-    engine = create_engine(db_connection_string)
-    
-    # Load into Data Warehouse
-    try:
-        df.to_sql(table_name, con=engine, if_exists='append', index=False)
-        print(f"Successfully loaded {len(df)} records into {table_name}.")
-    except Exception as e:
-        print(f"Database insertion failed: {e}")
+    // Ambil target OPSID di Kolom I
+    let currentOpsId = String(row[idxOpsId] || "").trim().toLowerCase(); 
 
+    if (currentOpsId === searchId && searchId !== "") {
+      
+      if (baggerFullName === "") {
+        baggerFullName = String(row[idxBagger]); 
+      }
 
+      let dateVal = row[idxDate];
+      let dateDisplay = ""; 
+      let dateCompare = ""; 
+      
+      // Pastikan format tanggal cocok dengan kalender HTML (yyyy-MM-dd)
+      if (Object.prototype.toString.call(dateVal) === '[object Date]') {
+        dateDisplay = Utilities.formatDate(dateVal, tz, "dd-MMM-yyyy");
+        dateCompare = Utilities.formatDate(dateVal, tz, "yyyy-MM-dd");
+      } else {
+        dateDisplay = String(dateVal);
+        dateCompare = String(dateVal); 
+      }
 
+      // Proses Filter Tanggal
+      if (targetDate && targetDate !== "") {
+        if (dateCompare !== targetDate) {
+          continue; 
+        }
+      }
 
+      let timeStr = String(row[idxTime]); 
+      let qty = Number(row[idxQty]) || 0;
 
+      if (!results[dateDisplay]) {
+        results[dateDisplay] = { total: 0, details: [] };
+      }
+
+      results[dateDisplay].total += qty;
+      results[dateDisplay].details.push({ time: timeStr, qty: qty });
+    }
+  }
+
+  return {
+    name: baggerFullName,
+    data: results
+  };
+}
