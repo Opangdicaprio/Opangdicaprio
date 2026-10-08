@@ -28,7 +28,7 @@ I built a Python automation script that runs as a scheduled cron job. The script
 ## 💻 Sample Code Snippet (Sanitized)
 Here is a conceptual snippet demonstrating the data transformation phase before loading it into the data warehouse:
 
-```python
+```javascript
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
       .setTitle('Portal Cek Performa Bagger')
